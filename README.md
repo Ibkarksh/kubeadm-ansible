@@ -1,4 +1,4 @@
-#Instaal K8S cluster using kubeadm tool 
+# Install K8S cluster using kubeadm tool 
 ## Structure
 This reposiotry consists of 2 roles:
 1. masters: for the masters installation
@@ -57,7 +57,7 @@ become_method=sudo
 #become_user=root
 ```
 ## Installation Playbook
-``bash
+```bash
 ansible-playbook -i hosts main.yaml
 ```
 ## Installation Nginx-Ingress using helm chart

@@ -28,7 +28,7 @@
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
     remote_src: true
-    mode: '0644'
+    mode: '0700'
   notify: create calico network overlay
 - name: Adding kube-api zone
   firewalld:
