@@ -1,0 +1,7 @@
+---
+- name: Include needed tasks
+  include_tasks: "{{ item }}"
+  with_items:
+  - 01.prereq.yaml
+  - 03.global-config.yaml
+  - 04.ha-etcd.yaml

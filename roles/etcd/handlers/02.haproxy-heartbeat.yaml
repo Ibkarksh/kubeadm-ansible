@@ -1,0 +1,7 @@
+---
+- name: Remove the old configuration file
+  file:
+    path: "/etc/haproxy/haproxy.cfg"
+    state: absent
+- name: sysctl
+  command: "sysctl -p"

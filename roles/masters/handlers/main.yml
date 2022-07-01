@@ -1,0 +1,28 @@
+---
+- name: sysctl
+  command: "sysctl -p"
+- name: swapoff
+  command: swapoff -a
+- name: Disable SELinux
+  selinux:
+    state: disabled
+- name: sysctl
+  command: "sysctl --system"
+- name: clean
+  command: apt-get clean
+- name: firewall-reload
+  service:
+    name: firewalld
+    state:  reloaded
+- name: generate a static manifest for etcd cluster
+  shell: kubeadm init phase etcd local --config="/var/{{ inventory_hostname }}/kubeadmcfg.yaml"
+- name: restart containerd
+  service:
+    name: containerd
+    state: restarted
+    enabled: yes
+- name: creating first master node
+  shell: kubeadm init --config /var/kubeadm-config.yaml
+  register: firstmaster
+- name: create calico network overlay
+  command: kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml --kubeconfig /etc/kubernetes/admin.conf

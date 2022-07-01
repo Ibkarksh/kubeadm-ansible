@@ -1,0 +1,50 @@
+---
+- name: sysctl
+  command: "sysctl -p"
+- name: swapoff
+  command: swapoff -a
+- name: Disable SELinux
+  selinux:
+    state: disabled
+- name: sysctl
+  command: "sysctl --system"
+- name: clean
+  command: apt-get clean
+- name: firewall-reload
+  service:
+    name: firewalld
+    state:  reloaded
+- name: generate a static manifest for etcd cluster
+  shell: kubeadm init phase etcd local --config="/var/{{ inventory_hostname }}/kubeadmcfg.yaml"
+- name: restart containerd
+  service:
+    name: containerd
+    state: restarted
+    enabled: yes
+- name: creating first master node
+  shell: kubeadm init --config /var/kubeadm-config.yaml
+  register: firstmaster
+- name: create calico network overlay
+  command: kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml --kubeconfig /etc/kubernetes/admin.conf
+- name: touch /var/discovery-token-ca-cert-hash
+  file:
+    path: "/var/discovery-token-ca-cert-hash"
+    state: touch
+- name: touch /var/kubeadm-token
+  file:
+    path: "/var/kubeadm-token"
+    state: touch
+- name: get final_command
+  set_fact:
+    final_command: "{{ final_command | default(joiningcommand.results.0.stdout) }}"
+  delegate_to: 127.0.0.1
+  when: ansible_hostname == groups['workers'].0
+- name: Adding final_command to defaults 
+  ansible.builtin.lineinfile: 
+    path: "{{ playbook_dir }}/roles/{{ role_name }}/defaults/main.yml" 
+    regexp: '^bootstrap_command ' 
+    line: "bootstrap_command: {{ final_command }}" 
+    backrefs: true 
+  delegate_to: 127.0.0.1 
+  when: ansible_hostname == groups['workers'].0 
+

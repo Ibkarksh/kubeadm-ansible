@@ -1,0 +1,75 @@
+---
+- name: Set a hostname
+  hostname:
+    name: "{{ inventory_hostname }}"
+- name: Set timezone to Africa/Cairo
+  timezone:
+    name: Africa/Cairo
+- stat: path=/etc/selinux/config
+  register: selinuxfile
+- name: replacing Enforcing into Disabled SElinux
+  lineinfile:
+    path: /etc/selinux/config
+    regexp: 'SELINUX=enforcing'
+    line: 'SELINUX=disabled'
+    backrefs: yes
+  when: selinuxfile.stat.exists
+  notify: Disable SELinux
+- name: flush_handlers
+  meta: flush_handlers
+
+- name: Disable swap
+  lineinfile:
+    path: /etc/fstab
+    regexp: '\W*(swap)\W*'
+    state:  absent
+  notify: swapoff
+- name: flush_handlers
+  meta: flush_handlers
+- name: adjust hosts file
+  lineinfile:
+    path: /etc/hosts
+    line: "{{ hostvars[item].ansible_host }} {{ item }}"
+  with_items:
+  - "{{ groups['haproxy-keepalive'] }}"
+  - "{{ groups['masters'] }}"
+  - "{{ groups['etcd'] }}"
+  - "{{ groups['workers'] }}"
+- name: Add VIP to hosts file
+  lineinfile:
+    path: /etc/hosts
+    line: "{{ VIP }} cluster-endpoint"
+- name: Add the transparent masquerading  module
+  community.general.modprobe:
+    name: "{{ item }}"
+    state: present
+  with_items:
+  - overlay
+  - br_netfilter
+- name: copy file sets bridged packets to traverse iptables rules.
+  copy:
+    src: files/k8s.conf
+    dest: /etc/sysctl.d/k8s.conf
+    owner: root
+    group: root
+    mode: 644
+  notify: sysctl
+- ansible.posix.firewalld:
+    masquerade: yes
+    state: enabled
+    permanent: yes
+- name: start firewalld
+  service:
+    name: firewalld
+    state: restarted
+    enabled: yes
+- name: firewall configuration
+  firewalld:
+    port: "{{ item }}"
+    state:  enabled
+    permanent:  yes
+  notify: firewall-reload
+  loop: "{{ ports }}"
+
+
+

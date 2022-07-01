@@ -1,0 +1,6 @@
+---
+- name: Include needed tasks
+  include_tasks: "{{ item }}"
+  with_items:
+  - 01.prereq.yaml
+  - 02.haproxy-heartbeat.yaml

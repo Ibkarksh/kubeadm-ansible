@@ -1,0 +1,18 @@
+---
+#The virtual IP wich will be floating between LB1 and LB2
+VIP: 192.168.60.10
+#The used port on the kube-api server
+API_PORT: 6443
+#The used interface name in the keepalive
+ifname: eth1
+#Adding tmp_release because google doesn't add the support for focal
+tmp_release: xenial
+ports:
+  - 6443/tcp
+  - 2379-2380/tcp
+  - 10250/tcp
+  - 10259/tcp
+  - 10257/tcp
+  - 10250/tcp
+  - 30000-32767/tcp
+

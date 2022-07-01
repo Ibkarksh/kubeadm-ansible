@@ -1,0 +1,41 @@
+---
+- name: check bootstrap_command
+  command: "grep bootstrap_command {{ playbook_dir }}/roles/{{ role_name }}/defaults/main.yml"
+  delegate_to: '127.0.0.1'
+  register: result
+  ignore_errors: yes
+- name: clear final_command
+  set_fact:
+    final_command:
+  delegate_to: 127.0.0.1
+  when: ansible_hostname == groups['workers'].0
+  when: result.stdout | length == 0
+
+- name: Extract discovery-token-ca-cert-hash and token
+  command: kubeadm token create --print-join-command
+  register: joiningcommand
+  delegate_to: "{{ item }}"
+  with_items:
+  - "{{ groups['masters'].0 }}"
+  when: ansible_hostname == groups['workers'].0
+- debug: 
+    msg: "{{ joiningcommand.results.0.stdout }}"
+  when: ansible_hostname == groups['workers'].0
+  when: result.stdout | length == 0
+  ignore_errors: yes
+#- name: set final_command 
+  #set_fact: 
+    #final_command: "{{ joiningcommand.results.0.stdout }}" 
+  #delegate_to: "{{ item }}"
+  #with_items: "{{ play_hosts }}"
+  #when: ansible_hostname == groups['workers'].0 
+- name: Adding final_command to defaults  
+  ansible.builtin.lineinfile:  
+    path: "{{ playbook_dir }}/roles/{{ role_name }}/defaults/main.yml"  
+    regexp: '(^bootstrap_command: kubeadm join )'
+    line: "bootstrap_command: {{ joiningcommand.results.0.stdout }}"  
+    backrefs: true  
+    state: present
+  delegate_to: 127.0.0.1  
+  when: ansible_hostname == groups['workers'].0  
+

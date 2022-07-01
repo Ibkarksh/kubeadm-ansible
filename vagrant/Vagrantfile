@@ -1,0 +1,31 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# All Vagrant configuration is done below. The "2" in Vagrant.configure
+# configures the configuration version (we support older styles for
+# backwards compatibility). Please don't change it unless you know what
+# you're doing.
+Vagrant.configure(2) do |config|  
+  myVMs = 3
+  config.disksize.size = '20GB'
+  (1..myVMs).each do |i|
+    config.vm.define "node-#{i}" do |node|
+      node.vm.box = "almalinux/8"
+      IP = "192.168.160.#{i+2}"
+      node.vm.network "private_network", ip: IP
+      node.vm.synced_folder ".", "/vagrant", disabled: true
+
+      config.vm.provider "libvirt" do |vb|
+        vb.qemu_use_session = false
+        # Customize the amount of memory on the VM:
+        vb.memory = "3072"
+        vb.cpus   = "2"
+  config.vm.provision "shell", inline: <<-SHELL
+  cat << EOF >> /home/vagrant/.ssh/authorized_keys
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCgS65xR/FAlLz9ZoHi7LLCm3n6/2b5vNo5dccmtkHwTY5KuSy10Lm9esCCmcA98XSbDYi52Pt8FjlWYnubD+TqTazoElBUgbwACU41hyHcjKAIdDysXTqYDGo/Pk+MfobnKIN1XaBI6/Dpu9qdobLKy4zd7ea/XwPFv9XG7+kVPkn2xmcbK/goUil3NMve/XBWwx7PHJtAElREkGMwmvaz9/FgvvLa9VCsg33nOwR579AdjkD6aGnXOMga1xCwxUJHFl7goDOwq2Qr1ZJlIYyMIlwTrQmup95+i+jN7yymFIjM165vegmdahoqbtc9lp66KS13F7la96//ON/DMKC8zUacBuMa9wuPGGWEH6ZDvoBB8nzzGMf/LLpon4Vf9XoRGM3D+QfJAruwMeKUg7wq08XBxObMDNE4ongtohSX9Ei1GAIGONz5uiDmcjzDACYdg0bXlebHapMJtYvAaQqIt8sfpp6ZMKBxdGR2x5tH1lvT8Gk6P34XfPZ0yCcAaGE= ibrahim@fedora
+EOF
+        SHELL
+      end
+    end
+  end
+end

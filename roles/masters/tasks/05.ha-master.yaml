@@ -1,0 +1,74 @@
+---
+- name: Intialize cluster 
+  shell: |
+    kubeadm reset -f && \
+    kubeadm init --apiserver-advertise-address "{{ ansible_host }}" \
+    --control-plane-endpoint cluster-endpoint |grep \
+    '"All control plane components are healthy"\|"Waiting for the kubelet to boot up the control plane as static Pods"'
+  args:
+    creates: /etc/kubernetes/admin.conf
+  register: result
+  ignore_errors: true
+  #changed_when:
+  #- result.rc == 1
+  #- "'All control plane components are healthy' in result.stderr"
+  #- "'Waiting for the kubelet to boot up the control plane as static Pods' in result.stderr"
+- name: debug output
+  debug:
+    msg: "{{ result }}"
+- name: create .kube directory
+  file:
+    path: "/home/{{ ansible_user }}/.kube"
+    state: directory
+    recurse: true
+- name: Copy kubeconfig file
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: "/home/{{ ansible_user }}/.kube/config"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    remote_src: true
+    mode: '0644'
+  notify: create calico network overlay
+- name: Adding kube-api zone
+  firewalld:
+    zone: kubeapi
+    state: present
+    permanent: true
+  notify: firewall-reload
+- name: Limit access to kube-api server
+  firewalld:
+    source: "{{ sources }}"
+    zone: kubeapi
+    state: enabled
+    permanent: true
+- name: Specify the allowed port
+  firewalld:
+    zone: kubeapi
+    state: enabled
+    permanent: true
+    port: 6443/tcp
+  notify: firewall-reload
+- name: Add helm CLI utility
+  shell: |
+    curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+    chmod 700 /var/get_helm.sh
+    PATH=$PATH:/usr/local/bin /var/get_helm.sh
+  args:
+    chdir: /var
+    creates: /usr/local/bin/helm
+- name: Extract discovery-token-ca-cert-hash and token
+  shell: kubeadm token create --print-join-command > /var/join-command
+  args:
+    creates: /var/join-command
+  when: ansible_hostname == groups['masters'].0
+- name: fetch /var/join-command file to localhost
+  fetch:
+    src: "/var/join-command"
+    dest: "/tmp/"
+    flat: true
+- name: copy data from /tmp to playbook
+  copy:
+    src: "/tmp/join-command"
+    dest: "{{ playbook_dir }}/roles/{{ role_name }}/files/join-command"
+  delegate_to: '127.0.0.1'

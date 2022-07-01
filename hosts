@@ -1,0 +1,7 @@
+[etcd]
+[haproxy-keepalive]
+[masters]
+master-01 ansible_host=192.168.160.5  private_ip=192.168.160.5
+[workers]
+worker-01 ansible_host=192.168.160.3  private_ip=192.168.160.3
+worker-02 ansible_host=192.168.160.4  private_ip=192.168.160.4

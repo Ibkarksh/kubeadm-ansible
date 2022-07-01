@@ -1,0 +1,25 @@
+global
+    user haproxy
+    group haproxy
+
+defaults
+    mode http
+    log global
+    retries 2
+    timeout connect 3000ms
+    timeout server 5000ms
+    timeout client 5000ms
+
+frontend kubernetes
+    bind {{ VIP }}:{{ API_PORT }}
+    option tcplog
+    mode tcp
+    default_backend kubernetes-master-nodes
+
+backend kubernetes-master-nodes
+    mode tcp
+    balance roundrobin
+    option tcp-check
+{% for host in groups['masters'] %}
+    server {{ host }} {{ hostvars[host].ansible_host }}:{{ API_PORT }} check fall 3 rise 2
+{% endfor %}

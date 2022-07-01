@@ -1,0 +1,62 @@
+---
+- name: Update repositories cache and install "haproxy & heartbeat" package
+  yum:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+  with_items:
+  - heartbeat
+  - haproxy
+- name: Create and copy haproxy config
+  template:
+    src: "templates/haproxy.cfg.j2"
+    dest: "/etc/haproxy/haproxy.cfg"
+    owner: root
+    group: root
+    mode: '0644'
+    backup: yes
+- sysctl:
+    name: net.ipv4.ip_nonlocal_bind
+    value: '1'
+    state: present
+  notify: sysctl
+- name: flush_handlers
+  meta: flush_handlers
+- name: start haproxy
+  service:
+    name: haproxy
+    state: restarted 
+    enabled: yes
+- name: Copy Heartbeat stored data for authenticating 
+  copy:
+    src: files/authkeys
+    dest: /etc/ha.d/authkeys
+    owner: root
+    group: root
+    mode: '600'
+- name: Copy Heartbeat Configurations
+  template:
+    src: templates/ha.cf
+    dest: /etc/ha.d/ha.cf
+    owner: root
+    group: root
+    mode: '600'
+- name: Set Heartbeat master
+  template:
+    src: templates/haresources.j2
+    dest: /etc/ha.d/haresources
+    owner: root
+    group: root
+    mode: '600'
+- name: replacing Interface name of heartbeat
+  lineinfile:
+    path: /usr/lib/ocf/resource.d//heartbeat/IPaddr
+    regexp: 'OCF_RESKEY_nic_default="eth0"'
+    line: 'OCF_RESKEY_nic_default={{ ifname }}'
+    backrefs: yes
+- name: start heartbeat
+  service:
+    name: heartbeat
+    state: restarted
+    enabled: yes
+

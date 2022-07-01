@@ -1,0 +1,12 @@
+- hosts: masters
+  become: yes
+  vars:
+    VIP: 192.168.160.5
+  roles:
+   - masters
+- hosts: workers
+  vars:
+    VIP: 192.168.160.5
+  become: yes
+  roles:
+   - workers

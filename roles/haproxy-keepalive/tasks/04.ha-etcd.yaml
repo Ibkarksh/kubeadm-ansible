@@ -1,0 +1,94 @@
+---
+- name: create kubelet.service.d directory
+  file:
+    path: /etc/systemd/system/kubelet.service.d
+    state: directory
+- name: copy kubelet systemd unit file
+  copy:
+    src: files/kubelet-systemd
+    dest: /etc/systemd/system/kubelet.service.d/20-etcd-service-manager.conf
+    owner: root
+    group: root
+- name: daemon-reload and start kubelet service
+  systemd:
+    daemon_reload: yes
+    name: kubelet
+    enabled: yes
+    state: started
+- name: create local directory for each node
+  file:
+    path: "{{ playbook_dir }}/roles/{{ role_name }}/files/{{ inventory_hostname }}"
+    state: directory
+  delegate_to: '127.0.0.1'
+- name: create remote dirs for each etcd node
+  file:
+    path: "/var/{{ inventory_hostname }}"
+    state: directory
+- name: create config etcd file for each node
+  template:
+    src: templates/kubeadmcfg.yaml.j2
+    dest: "{{ playbook_dir }}/roles/{{ role_name }}/files/{{ item }}/kubeadmcfg.yaml"
+  with_items:
+  - "{{ groups['etcd'] }}"
+  delegate_to: '127.0.0.1'
+  when: ansible_hostname == groups['etcd'].0
+- name: copy config etcd file for each node
+  copy:
+    src: "files/{{ inventory_hostname }}/kubeadmcfg.yaml"
+    dest: "/var/{{ inventory_hostname }}/kubeadmcfg.yaml"
+- name: check ca.crt existence to make next shell & command idempotent
+  stat:
+    path: /etc/kubernetes/pki/etcd/ca.crt 
+  register: cacrt
+- name: Generate main CA
+  shell: kubeadm init phase certs etcd-ca
+  args:
+    creates: /etc/kubernetes/pki/etcd/ca.crt
+  when: ansible_hostname == groups['etcd'].0
+- name: fetch ca.crt file to localhost
+  fetch:
+    src: /etc/kubernetes/pki/etcd/ca.crt
+    dest: "/tmp/ca.crt"
+    flat: true
+  with_items:
+  - "{{ groups['etcd'] }}"
+  when: ansible_hostname == groups['etcd'].0
+- name: fetch ca.key file to localhost
+  fetch:
+    src: /etc/kubernetes/pki/etcd/ca.key
+    dest: "/tmp/ca.key"
+    flat: true
+  with_items:
+  - "{{ groups['etcd'] }}"
+  when: ansible_hostname == groups['etcd'].0
+- name: copy data from /tmp to playbook
+  copy:
+    src: "/tmp/{{ item }}"
+    dest: "{{ playbook_dir }}/roles/{{ role_name }}/files/{{ inventory_hostname }}/"
+  delegate_to: '127.0.0.1'
+  with_items:
+  - ca.crt
+  - ca.key
+- name: add etcd subdirectory to /etc/kubernetes/pki
+  file:
+    path: "/etc/kubernetes/pki/etcd"
+    state: directory
+    recurse: yes
+- name: copy CA to remote hosts
+  copy:
+    src: "files/{{ inventory_hostname }}/{{ item }}"
+    dest: "/etc/kubernetes/pki/etcd/{{ item }}"
+  with_items:
+  - ca.crt
+  - ca.key
+  when: ansible_hostname != groups['etcd'].0
+- name: Generate cert and key for all nodes
+  become: true
+  shell: |
+    kubeadm init phase certs etcd-server --config=/var/{{ inventory_hostname }}/kubeadmcfg.yaml \
+    && kubeadm init phase certs etcd-peer --config=/var/{{ inventory_hostname }}/kubeadmcfg.yaml \
+    && kubeadm init phase certs etcd-healthcheck-client --config=/var/{{ inventory_hostname }}/kubeadmcfg.yaml \
+    && kubeadm init phase certs apiserver-etcd-client --config=/var/{{ inventory_hostname }}/kubeadmcfg.yaml
+  args:
+    creates: /etc/kubernetes/pki/apiserver-etcd-client.crt
+  notify: generate a static manifest for etcd cluster

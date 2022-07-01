@@ -1,0 +1,9 @@
+---
+- name: sysctl
+  command: "sysctl -p"
+- name: swapoff
+  command: swapoff -a
+- name: Disable SELinux
+  selinux:
+    state: disabled
+

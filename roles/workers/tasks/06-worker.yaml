@@ -1,0 +1,21 @@
+---
+- name: Extract discovery-token-ca-cert-hash and token
+  copy:
+    src: "{{ playbook_dir }}/roles/masters/files/join-command"
+    dest: "{{ playbook_dir }}/roles/{{ role_name }}/files/join-command"
+    mode: '744'
+    owner: root
+    group: root
+  delegate_to: 127.0.0.1
+- name: copy files/join-command
+  copy:
+    src: "files/join-command"
+    dest: "/var/join-command"
+    mode: '744'
+    owner: root
+    group: root
+- name: Provision workers
+  shell: |
+    kubeadm reset -f && /var/join-command
+  args:
+    creates: /etc/kubernetes/pki/ca.crt

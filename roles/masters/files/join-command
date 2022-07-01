@@ -1,0 +1,1 @@
+kubeadm join cluster-endpoint:6443 --token w4gv7m.v5uq8t40wdv4ao0j --discovery-token-ca-cert-hash sha256:fca28f33c15a0dac6a7a2085c42b05aa8751fd49770bc3d616d6888e7efd260c 
