@@ -1,4 +1,4 @@
-#Instaal K8S cluster using kubeadm tool 
+# Install K8S cluster using kubeadm tool 
 ## Structure
 This reposiotry consists of 2 roles:
 1. masters: for the masters installation
