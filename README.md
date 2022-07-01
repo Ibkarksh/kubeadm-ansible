@@ -57,7 +57,7 @@ become_method=sudo
 #become_user=root
 ```
 ## Installation Playbook
-``bash
+```bash
 ansible-playbook -i hosts main.yaml
 ```
 ---
