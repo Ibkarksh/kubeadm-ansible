@@ -60,6 +60,21 @@ become_method=sudo
 ``bash
 ansible-playbook -i hosts main.yaml
 ```
+## Installation Nginx-Ingress using helm chart
+```bash
+helm repo add nginx-stable https://helm.nginx.com/stable
+helm repo update
+helm install ingress-controller nginx-stable/nginx-ingress --set controller.kind=daemonset --namespace ingress-nginx --create-namespace
+```
+## Deploying Juice shop workload
+You can find under deployments/ a manifest file which will help you in the installation of:
+1. Deployment of 2 replicas
+2. Service to expose the deployment
+3. Ingress Object to expose the deployment
+```bash
+#Apply this command on master node
+kubectl apply -f deployments/juice-shop.yaml 
+```
 ---
 ## Notes:
 ### Important Variables
