@@ -6,7 +6,7 @@ This reposiotry consists of 2 roles:
 ## Prerequisites:
 1. Remote user is a member of sudo group
 ```bash
-usermod -aG sudo ubuntu
+usermod -aG sudo vagrant
 ```
 2. Make sure the system doesn't ask for the password when sudo is used
 ```bash
